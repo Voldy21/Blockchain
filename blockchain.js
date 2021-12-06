@@ -44,8 +44,7 @@ class Blockchain {
       lastBlock.sequenceNo + 1 == block.sequenceNo &&
       block.lastHash === lastBlock.hash &&
       block.hash === Block.blockHash(block) &&
-      Block.verifyBlock(block) &&
-      Block.verifyProposer(block, this.getProposer())
+      Block.verifyBlock(block)
     ) {
       console.log("BLOCK VALID");
       return true;

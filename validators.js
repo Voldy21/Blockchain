@@ -1,5 +1,6 @@
 // Import the wallet class
 const Wallet = require("./wallet");
+const {SECRET} = require("./config");
 
 class Validators {
   // constructor will take an argument which is the number of nodes in the network
@@ -14,7 +15,7 @@ class Validators {
   generateAddresses(numberOfValidators) {
     let list = [];
     for (let i = 0; i < numberOfValidators; i++) {
-      list.push(new Wallet("NODE" + i).getPublicKey());
+      list.push(new Wallet(SECRET).getPublicKey());
     }
     return list;
   }
