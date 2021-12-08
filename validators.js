@@ -15,7 +15,7 @@ class Validators {
   generateAddresses(numberOfValidators) {
     let list = [];
     for (let i = 0; i < numberOfValidators; i++) {
-      list.push(new Wallet(SECRET).getPublicKey());
+      list.push(new Wallet("NODE" + i).getPublicKey());
     }
     return list;
   }

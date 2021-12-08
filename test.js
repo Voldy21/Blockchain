@@ -15,7 +15,7 @@ const MessagePool = require("./message-pool");
 const Transaction = require("./transaction");
 const Block = require("./block");
 
-const wallet = new Wallet(SECRET);
+const wallet = new Wallet("NODE" + 1);
 const transactionPool = new TransactionPool();
 const validators = new Validators(NUMBER_OF_NODES);
 const blockchain = new Blockchain(validators);
@@ -26,22 +26,23 @@ const messagePool = new MessagePool();
 
 let delta = 100;
 let walletList = [];
+let block;
+let prepareBlock;
+let commitBlock;
+
 //Building up the  Stage
 //init walletList, validators, transactionPool
-let block = init();
-console.log(block)
+init();
 //Propose
-/*
-block = propose(block);
+propose();
 //Prepare
-block = prepare(block);
-*/
-/*
+prepare();
+
 //Commit Stage
 commit();
 //Notify
-notify();
-*/
+//notify();
+
 function init() {
   //init walletList
   for (let i = 0; i < NUMBER_OF_NODES; i++) {
@@ -56,54 +57,54 @@ function init() {
     //If the threshold is reached, create the block
     if(thresholdReached){
       console.log("Threshold Reached")
-      let block = blockchain.createBlock(
+      block = blockchain.createBlock(
         transactionPool.transactions,
         wallet
       )
-      return block;
     }
 }
 
-function propose(block) {  
+async function propose(){
   //create block and broadcast it
   if (
-      blockPool.exisitingBlock(block) && // check if block exists in blockPool
+      !blockPool.exisitingBlock(block) && // check if block exists in blockPool
       blockchain.isValidBlock(block)     // Check if valid
     ){
       //add to the block pool
+      console.log("Adding block to pool")
       blockPool.addBlock(block)
 
       //Create a prepare block and broadcast to other nodes
-      block = preparePool.prepare(block, wallet);
+      prepareBlock = preparePool.prepare(block, wallet);
+      console.log("Creating preparePool block")
       //Broadcast and get response
-      sleep()
-
-      return block;
+      await sleep(delta)
     }
 }
 
-function prepare(block) {
+
+async function prepare() {
   //Check if wallet is a validator
   //Check the prepare message if it's valid
-  console.log(block)
+  
   if (
-      preparePool.isValidPrepare(block, wallet) &&
+      preparePool.isValidPrepare(prepareBlock, wallet) &&
       validators.isValidValidator(wallet.publicKey)
-    ) {
-      preparePool.addPrepare(block);
+    ) {      
+      preparePool.addPrepare(prepareBlock);
       sleep()
-      for(let i=0;i<=MIN_APPROVALS; i++){
-        preparePool.addPrepare(block);
+      for(let i=0;i<=MIN_APPROVALS+1; i++){
+        preparePool.addPrepare(prepareBlock);
       }
-      console.log("Entered")
-      if (preparePool.list.length >= MIN_APPROVALS){
+      console.log("123")
+      if (preparePool.list[prepareBlock.blockHash].length >= MIN_APPROVALS){
         console.log("preparePool meets minimum approvals")
         //move on to commit step
-        block = commitPool.commit(block, wallet)
+        commitBlock = commitPool.commit(prepareBlock, wallet)
         //broadcast commit message and get response
-        sleep()
-        sleep()
-        return block;
+        await sleep(delta)
+        await sleep(delta)
+        return prepareBlock;
       }
     }
 }
@@ -111,9 +112,9 @@ function commit(){
   //Check if validCommit
   //Check if the wallet is a validator
    if (
-      !this.commitPool.existingCommit(data.commit) &&
-      this.commitPool.isValidCommit(data.commit) &&
-      this.validators.isValidValidator(data.commit.publicKey)
+      !commitPool.existingCommit(block) &&
+      commitPool.isValidCommit(block) &&
+      validators.isValidValidator(block.publicKey)
     ) {
 
     //add commit block to pool
@@ -130,15 +131,15 @@ function commit(){
      //When MIN_APPROVALS are met, 
     //add block, blockpool, preparepool, commit pool to blockchain
     if (
-      this.commitPool.list[data.commit.blockHash].length >=
+      commitPool.list[block.blockHash].length >=
       MIN_APPROVALS
     ) {
       console.log("ADDING BLOCK TO BLOCKCHAIN")
-      this.blockchain.addUpdatedBlock(
+      blockchain.addUpdatedBlock(
         data.commit.blockHash,
-        this.blockPool,
-        this.preparePool,
-        this.commitPool
+        blockPool,
+        preparePool,
+        commitPool
       );
     }
   }
@@ -157,10 +158,13 @@ function notify(block) {
   transactionPool.clear()
 }
 
-async function sleep() {
-  console.log("Sleeping");
-  await new Promise((r) => setTimeout(r, delta));
-  console.log("Waking up");
+function sleep(ms) {
+  console.log("Sleeping")
+  return new Promise((resolve) => {
+    console.log("Waking up")
+    setTimeout(resolve, ms);
+  });
+  
 }
 
 function randomMember() {
